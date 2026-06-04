@@ -57,16 +57,8 @@ spec:
           placement:
             availabilityZone: {{ _ocp4_workload_tenant_machineset_template.spec.template.spec.providerSpec.value.placement.availabilityZone }}
             region: {{ _ocp4_workload_tenant_machineset_region }}
-          securityGroups:
-            - filters:
-                - name: tag:Name
-                  values:
-                    - {{ _ocp4_workload_tenant_machineset_infrastructure_name }}-worker-sg
-          subnet:
-            filters:
-              - name: tag:Name
-                values:
-                  - {{ _ocp4_workload_tenant_machineset_infrastructure_name }}-private-{{ _ocp4_workload_tenant_machineset_region }}{{ _ocp4_workload_tenant_machineset_template.spec.template.spec.providerSpec.value.placement.availabilityZone[-1:] }}
+          securityGroups: {{ _ocp4_workload_tenant_machineset_template.spec.template.spec.providerSpec.value.securityGroups | to_json }}
+          subnet: {{ _ocp4_workload_tenant_machineset_template.spec.template.spec.providerSpec.value.subnet | to_json }}
           tags:
             - name: kubernetes.io/cluster/{{ _ocp4_workload_tenant_machineset_infrastructure_name }}
               value: owned
