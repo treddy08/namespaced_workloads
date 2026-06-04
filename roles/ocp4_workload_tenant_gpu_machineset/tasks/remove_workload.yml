@@ -1,0 +1,31 @@
+---
+- name: Remove GPU machineset
+  kubernetes.core.k8s:
+    host: "{{ ocp4_workload_tenant_gpu_machineset_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_tenant_gpu_machineset_openshift_api_token }}"
+    validate_certs: false
+    state: absent
+    api_version: machine.openshift.io/v1beta1
+    kind: MachineSet
+    name: "{{ ocp4_workload_tenant_gpu_machineset_name }}"
+    namespace: openshift-machine-api
+
+- name: Wait for GPU machines to be deleted
+  kubernetes.core.k8s_info:
+    host: "{{ ocp4_workload_tenant_gpu_machineset_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_tenant_gpu_machineset_openshift_api_token }}"
+    validate_certs: false
+    api_version: machine.openshift.io/v1beta1
+    kind: Machine
+    namespace: openshift-machine-api
+    label_selectors:
+      - "machine.openshift.io/cluster-api-machineset={{ ocp4_workload_tenant_gpu_machineset_name }}"
+  register: r_gpu_machines
+  until: r_gpu_machines.resources | length == 0
+  retries: 30
+  delay: 10
+  ignore_errors: true
+
+- name: Print GPU machineset removal status
+  ansible.builtin.debug:
+    msg: "GPU machineset {{ ocp4_workload_tenant_gpu_machineset_name }} removed successfully"

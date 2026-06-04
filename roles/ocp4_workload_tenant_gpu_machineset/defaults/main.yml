@@ -1,0 +1,28 @@
+---
+# Cluster connection - uses sandbox credentials
+ocp4_workload_tenant_gpu_machineset_openshift_api_url: "{{ sandbox_openshift_api_url }}"
+ocp4_workload_tenant_gpu_machineset_openshift_api_token: "{{ cluster_admin_agnosticd_sa_token | trim }}"
+
+# Tenant identifier - used for machineset naming
+ocp4_workload_tenant_gpu_machineset_username: "user-{{ guid }}"
+
+# GPU instance type - selectable at provision time
+ocp4_workload_tenant_gpu_machineset_instance_type: g6.xlarge
+
+# GPU machineset configuration
+ocp4_workload_tenant_gpu_machineset_name: "gpu-{{ guid }}"
+ocp4_workload_tenant_gpu_machineset_replicas: 1
+ocp4_workload_tenant_gpu_machineset_role: worker-gpu
+ocp4_workload_tenant_gpu_machineset_root_volume_size: 250
+ocp4_workload_tenant_gpu_machineset_root_volume_type: gp3
+
+# GPU-specific taints to prevent non-GPU workloads from scheduling
+ocp4_workload_tenant_gpu_machineset_taints:
+  - key: nvidia.com/gpu
+    value: "true"
+    effect: NoSchedule
+
+# Wait for GPU node to join cluster
+ocp4_workload_tenant_gpu_machineset_wait_for_nodes: true
+ocp4_workload_tenant_gpu_machineset_wait_retries: 60
+ocp4_workload_tenant_gpu_machineset_wait_delay: 10
