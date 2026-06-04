@@ -1,37 +1,45 @@
 ---
+# Remove all machinesets created by this role for the tenant
+- name: Get all machinesets for this tenant
+  kubernetes.core.k8s_info:
+    api_version: machine.openshift.io/v1beta1
+    kind: MachineSet
+    namespace: openshift-machine-api
+  register: r_all_machinesets
+
+- name: Filter machinesets by name pattern (contains guid)
+  ansible.builtin.set_fact:
+    _tenant_machinesets: >-
+      {{ r_all_machinesets.resources
+         | selectattr('metadata.name', 'search', '-' + guid + '$')
+         | map(attribute='metadata.name')
+         | list }}
+
 - name: Remove tenant machinesets
+  when: _tenant_machinesets | length > 0
   kubernetes.core.k8s:
-    host: "{{ ocp4_workload_tenant_machineset_openshift_api_url }}"
-    api_key: "{{ ocp4_workload_tenant_machineset_openshift_api_token }}"
-    validate_certs: false
     state: absent
     api_version: machine.openshift.io/v1beta1
     kind: MachineSet
-    name: "{{ item.name }}-{{ guid }}"
+    name: "{{ item }}"
     namespace: openshift-machine-api
-  loop: "{{ ocp4_workload_tenant_machineset_groups }}"
-  loop_control:
-    label: "{{ item.name }}"
+  loop: "{{ _tenant_machinesets }}"
 
 - name: Wait for machines to be deleted
+  when: _tenant_machinesets | length > 0
   kubernetes.core.k8s_info:
-    host: "{{ ocp4_workload_tenant_machineset_openshift_api_url }}"
-    api_key: "{{ ocp4_workload_tenant_machineset_openshift_api_token }}"
-    validate_certs: false
     api_version: machine.openshift.io/v1beta1
     kind: Machine
     namespace: openshift-machine-api
     label_selectors:
-      - "machine.openshift.io/cluster-api-machineset={{ item.name }}-{{ guid }}"
-  register: r_machines_status
-  until: r_machines_status.resources | length == 0
+      - "machine.openshift.io/cluster-api-machineset={{ item }}"
+  register: r_machines
+  until: r_machines.resources | length == 0
   retries: 30
   delay: 10
   ignore_errors: true
-  loop: "{{ ocp4_workload_tenant_machineset_groups }}"
-  loop_control:
-    label: "{{ item.name }}"
+  loop: "{{ _tenant_machinesets }}"
 
-- name: Print machineset removal status
+- name: Print removal status
   ansible.builtin.debug:
-    msg: "Tenant machinesets removed successfully"
+    msg: "Removed {{ _tenant_machinesets | length }} machineset(s) for tenant {{ guid }}"

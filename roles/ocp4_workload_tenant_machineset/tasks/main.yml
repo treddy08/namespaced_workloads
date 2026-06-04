@@ -1,8 +1,11 @@
 ---
-- name: Running workload tasks
-  when: ACTION | default('provision') in ['provision', 'create']
+# --------------------------------------------------
+# Do not modify this file
+# --------------------------------------------------
+- name: Running workload provision tasks
+  when: ACTION == "provision"
   ansible.builtin.include_tasks: workload.yml
 
 - name: Running workload removal tasks
-  when: ACTION | default('provision') in ['remove', 'destroy']
+  when: ACTION == "destroy"
   ansible.builtin.include_tasks: remove_workload.yml

@@ -1,22 +1,14 @@
 ---
 galaxy_info:
-  author: Tyrell Reddy
-  description: Create tenant-specific machinesets for on-demand resource provisioning
-  company: Red Hat
-
-  license: GPL-3.0-or-later
-
-  min_ansible_version: "2.15"
-
-  platforms:
-    - name: Fedora
-      versions:
-        - all
-
+  role_name: ocp4_workload_machinesets
+  author: Red Hat, Wolfgang Kulhanek (wkulhane@redhat.com)
+  description: |
+    Set up additional MachineSets for OpenShift. One worker machineset must exist
+    before this role can be called.
+    Currently supports AWS.
+  license: MIT
+  min_ansible_version: '2.9'
+  platforms: []
   galaxy_tags:
-    - openshift
-    - gpu
-    - machineset
-    - tenant
-
-dependencies: []
+  - ocp
+  - openshift

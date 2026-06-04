@@ -1,53 +1,41 @@
 # ocp4_workload_tenant_machineset
 
-Creates tenant-specific machinesets for on-demand resource provisioning.
+Tenant-specific machineset provisioning using the proven `ocp4_workload_machinesets` logic.
 
 ## Purpose
 
-This workload provisions dedicated worker nodes for a tenant when they order their lab environment. Machinesets are created dynamically and removed when the tenant environment is destroyed, enabling cost-effective resource allocation.
+This role is a copy of `agnosticd.core_workloads.ocp4_workload_machinesets` adapted for tenant use. It provisions dedicated worker nodes for a tenant when they order their lab environment.
 
-## Features
+## Key Differences from Cluster Role
 
-- Creates AWS machinesets (any instance type) per tenant
-- Supports multiple machineset groups per tenant
-- Configurable instance types, taints, and node roles
-- Waits for nodes to join cluster and be ready
-- Labels nodes with tenant identifier for tracking
-- Automatic cleanup on tenant destruction
-- Flexible configuration matching core_workloads.ocp4_workload_machinesets pattern
-
-## Requirements
-
-- OpenShift cluster on AWS
-- Cluster-admin service account credentials
-- AWS quota for requested instance types
+- **Usage**: Tenant-level (namespace config) vs cluster-level
+- **Naming**: Machinesets named with tenant GUID
+- **Removal**: Implements proper cleanup in remove_workload.yml
+- **Labels**: Adds tenant labels to nodes for isolation
 
 ## Variables
 
-See defaults/main.yml for full variable documentation.
-
-**Key variable:** `ocp4_workload_tenant_machineset_groups` - list of machineset configurations
-
-## Example Usage
-
-### GPU Machineset
+Uses the same variable structure as the original role:
 
 ```yaml
-workloads:
-  - agnosticd.namespaced_workloads.ocp4_workload_tenant_machineset
-
-ocp4_workload_tenant_machineset_groups:
-  - name: gpu
-    instance_type: g6.xlarge
-    replicas: 1
+ocp4_workload_machinesets_machineset_groups:
+  - name: "gpu-{{ guid }}"
+    autoscale: false
+    total_replicas: 1
     role: worker-gpu
     taints:
       - key: nvidia.com/gpu
-        value: "true"
+        value: reserved
         effect: NoSchedule
+    node_labels:
+      tenant: "user-{{ guid }}"
+    instance_type: g6.xlarge
     root_volume_size: 250
 ```
 
+See `agnosticd.core_workloads.ocp4_workload_machinesets` for full documentation.
+
 ## Author
 
-Tyrell Reddy (treddy@redhat.com)
+Based on `ocp4_workload_machinesets` by Wolfgang Kulhanek  
+Adapted for tenant use by Tyrell Reddy (treddy@redhat.com)
