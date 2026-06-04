@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   author: Tyrell Reddy
-  description: Create tenant-specific GPU machineset for on-demand GPU provisioning
+  description: Create tenant-specific machinesets for on-demand resource provisioning
   company: Red Hat
 
   license: GPL-3.0-or-later

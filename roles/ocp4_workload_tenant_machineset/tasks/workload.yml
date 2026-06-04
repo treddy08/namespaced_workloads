@@ -1,0 +1,96 @@
+---
+- name: Get cluster infrastructure
+  kubernetes.core.k8s_info:
+    host: "{{ ocp4_workload_tenant_machineset_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_tenant_machineset_openshift_api_token }}"
+    validate_certs: false
+    api_version: config.openshift.io/v1
+    kind: Infrastructure
+    name: cluster
+  register: r_infrastructure
+
+- name: Set infrastructure facts
+  ansible.builtin.set_fact:
+    _ocp4_workload_tenant_machineset_platform: "{{ r_infrastructure.resources[0].status.platformStatus.type }}"
+    _ocp4_workload_tenant_machineset_region: "{{ r_infrastructure.resources[0].status.platformStatus.aws.region }}"
+    _ocp4_workload_tenant_machineset_infrastructure_name: "{{ r_infrastructure.resources[0].status.infrastructureName }}"
+
+- name: Verify platform is AWS
+  ansible.builtin.assert:
+    that:
+      - _ocp4_workload_tenant_machineset_platform == "AWS"
+    fail_msg: "This workload only supports AWS platform. Current platform: {{ _ocp4_workload_tenant_machineset_platform }}"
+
+- name: Get existing machinesets to use as template
+  kubernetes.core.k8s_info:
+    host: "{{ ocp4_workload_tenant_machineset_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_tenant_machineset_openshift_api_token }}"
+    validate_certs: false
+    api_version: machine.openshift.io/v1beta1
+    kind: MachineSet
+    namespace: openshift-machine-api
+  register: r_machinesets
+
+- name: Set worker machineset template
+  ansible.builtin.set_fact:
+    _ocp4_workload_tenant_machineset_template: "{{ r_machinesets.resources | selectattr('spec.replicas', 'defined') | selectattr('spec.replicas', 'gt', 0) | first }}"
+
+- name: Create machinesets for tenant
+  kubernetes.core.k8s:
+    host: "{{ ocp4_workload_tenant_machineset_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_tenant_machineset_openshift_api_token }}"
+    validate_certs: false
+    state: present
+    definition: "{{ lookup('template', 'machineset-aws.yml.j2') }}"
+  loop: "{{ ocp4_workload_tenant_machineset_groups }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Wait for machinesets to be available
+  when: ocp4_workload_tenant_machineset_wait_for_nodes | bool
+  kubernetes.core.k8s_info:
+    host: "{{ ocp4_workload_tenant_machineset_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_tenant_machineset_openshift_api_token }}"
+    validate_certs: false
+    api_version: machine.openshift.io/v1beta1
+    kind: MachineSet
+    name: "{{ item.name }}-{{ guid }}"
+    namespace: openshift-machine-api
+  register: r_machinesets_status
+  until:
+    - r_machinesets_status.resources[0].status.availableReplicas is defined
+    - r_machinesets_status.resources[0].status.availableReplicas == item.replicas
+  retries: "{{ ocp4_workload_tenant_machineset_wait_retries }}"
+  delay: "{{ ocp4_workload_tenant_machineset_wait_delay }}"
+  loop: "{{ ocp4_workload_tenant_machineset_groups }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Wait for nodes to be ready
+  when: ocp4_workload_tenant_machineset_wait_for_nodes | bool
+  kubernetes.core.k8s_info:
+    host: "{{ ocp4_workload_tenant_machineset_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_tenant_machineset_openshift_api_token }}"
+    validate_certs: false
+    api_version: v1
+    kind: Node
+    label_selectors:
+      - "node-role.kubernetes.io/{{ item.role }}="
+      - "tenant={{ ocp4_workload_tenant_machineset_username }}"
+  register: r_nodes_status
+  until:
+    - r_nodes_status.resources | length == item.replicas
+    - r_nodes_status.resources | selectattr('status.conditions', 'defined') | map(attribute='status.conditions') | flatten | selectattr('type', 'eq', 'Ready') | selectattr('status', 'eq', 'True') | list | length == item.replicas
+  retries: "{{ ocp4_workload_tenant_machineset_wait_retries }}"
+  delay: "{{ ocp4_workload_tenant_machineset_wait_delay }}"
+  loop: "{{ ocp4_workload_tenant_machineset_groups }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Print node information
+  ansible.builtin.debug:
+    msg: "Machineset {{ item.item.name }}: {{ item.resources | length }} node(s) ready"
+  loop: "{{ r_nodes_status.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: r_nodes_status.results is defined

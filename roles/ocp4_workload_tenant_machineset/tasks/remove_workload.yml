@@ -1,0 +1,37 @@
+---
+- name: Remove tenant machinesets
+  kubernetes.core.k8s:
+    host: "{{ ocp4_workload_tenant_machineset_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_tenant_machineset_openshift_api_token }}"
+    validate_certs: false
+    state: absent
+    api_version: machine.openshift.io/v1beta1
+    kind: MachineSet
+    name: "{{ item.name }}-{{ guid }}"
+    namespace: openshift-machine-api
+  loop: "{{ ocp4_workload_tenant_machineset_groups }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Wait for machines to be deleted
+  kubernetes.core.k8s_info:
+    host: "{{ ocp4_workload_tenant_machineset_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_tenant_machineset_openshift_api_token }}"
+    validate_certs: false
+    api_version: machine.openshift.io/v1beta1
+    kind: Machine
+    namespace: openshift-machine-api
+    label_selectors:
+      - "machine.openshift.io/cluster-api-machineset={{ item.name }}-{{ guid }}"
+  register: r_machines_status
+  until: r_machines_status.resources | length == 0
+  retries: 30
+  delay: 10
+  ignore_errors: true
+  loop: "{{ ocp4_workload_tenant_machineset_groups }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Print machineset removal status
+  ansible.builtin.debug:
+    msg: "Tenant machinesets removed successfully"

@@ -1,0 +1,55 @@
+---
+# Cluster connection - uses sandbox credentials
+ocp4_workload_tenant_machineset_openshift_api_url: "{{ sandbox_openshift_api_url }}"
+ocp4_workload_tenant_machineset_openshift_api_token: "{{ cluster_admin_agnosticd_sa_token | trim }}"
+
+# Tenant identifier - used for machineset naming and node labels
+ocp4_workload_tenant_machineset_username: "user-{{ guid }}"
+
+# Machineset groups to create for this tenant
+# Each group creates a separate machineset with unique configuration
+#
+# Example - GPU machineset:
+#   ocp4_workload_tenant_machineset_groups:
+#   - name: gpu
+#     instance_type: g6.xlarge
+#     replicas: 1
+#     role: worker-gpu
+#     taints:
+#       - key: nvidia.com/gpu
+#         value: "true"
+#         effect: NoSchedule
+#     root_volume_size: 250
+#     root_volume_type: gp3
+#
+# Example - Multiple machinesets:
+#   ocp4_workload_tenant_machineset_groups:
+#   - name: gpu
+#     instance_type: g6.2xlarge
+#     replicas: 1
+#     role: worker-gpu
+#     taints:
+#       - key: nvidia.com/gpu
+#         operator: Exists
+#         effect: NoSchedule
+#   - name: cpu
+#     instance_type: m5a.4xlarge
+#     replicas: 2
+#     role: worker
+#     taints: []
+ocp4_workload_tenant_machineset_groups:
+  - name: gpu
+    instance_type: g6.xlarge
+    replicas: 1
+    role: worker-gpu
+    taints:
+      - key: nvidia.com/gpu
+        value: "true"
+        effect: NoSchedule
+    root_volume_size: 250
+    root_volume_type: gp3
+
+# Wait for nodes to join cluster and be ready
+ocp4_workload_tenant_machineset_wait_for_nodes: true
+ocp4_workload_tenant_machineset_wait_retries: 60
+ocp4_workload_tenant_machineset_wait_delay: 10
