@@ -30,7 +30,7 @@ spec:
 {% for taint in item.taints %}
         - key: {{ taint.key }}
 {% if taint.value is defined %}
-          value: {{ taint.value }}
+          value: "{{ taint.value }}"
 {% endif %}
           effect: {{ taint.effect }}
 {% endfor %}
