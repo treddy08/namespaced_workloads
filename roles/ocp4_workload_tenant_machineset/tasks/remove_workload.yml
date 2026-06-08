@@ -11,7 +11,7 @@
   ansible.builtin.set_fact:
     _tenant_machinesets: >-
       {{ r_all_machinesets.resources
-         | selectattr('metadata.name', 'search', '-' + guid + '$')
+         | selectattr('metadata.name', 'search', '-gpu-' + guid + '-')
          | map(attribute='metadata.name')
          | list }}
 
